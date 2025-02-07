@@ -97,40 +97,41 @@ void Main::Run()
 {
 	bool immediatePrint = true;
 	bool straightDivision = false;
-	readConfig();
 
-	long step = max / numThreads;
-	
-	if (straightDivision) {
-		for (long i = 0; i < numThreads; ++i) {
-			long start = i * step + 1;
-			long end = (i == numThreads - 1) ? max : (i + 1) * step;
-			threads.emplace_back(&Main::searchPrimes, this, i, start, end, ref(primes),immediatePrint);
+	if (readConfig()) {
+		long step = max / numThreads;
+
+		if (straightDivision) {
+			for (long i = 0; i < numThreads; ++i) {
+				long start = i * step + 1;
+				long end = (i == numThreads - 1) ? max : (i + 1) * step;
+				threads.emplace_back(&Main::searchPrimes, this, i, start, end, ref(primes), immediatePrint);
+			}
+
+			for (auto& thread : threads) {
+				thread.join();
+			}
 		}
+		else {
+			long lastThread = 0;
 
-		for (auto& thread : threads) {
-			thread.join();
-		}
-	}
-	else {
-		long lastThread = 0;
-
-		for (long num = 2; num <= max; num++) {
-			if (isPrime(num, numThreads, immediatePrint, ref(lastThread))) {
-				if (immediatePrint) {
-					cout << "Thread " << lastThread << " found prime: " << num << " at " << getTimeStamp() << endl;
-				}
-				else {
-					primes.push_back(num);
+			for (long num = 2; num <= max; num++) {
+				if (isPrime(num, numThreads, immediatePrint, ref(lastThread))) {
+					if (immediatePrint) {
+						cout << "Thread " << lastThread << " found prime: " << num << " at " << getTimeStamp() << endl;
+					}
+					else {
+						primes.push_back(num);
+					}
 				}
 			}
 		}
-	}
 
-	if (!immediatePrint) {
-		cout << "Primes found: " << endl;
-		for (long prime : primes) {
-			cout << prime << endl;
+		if (!immediatePrint) {
+			cout << "Primes found: " << endl;
+			for (long prime : primes) {
+				cout << prime << endl;
+			}
 		}
 	}
 }
@@ -148,33 +149,72 @@ string Main::getTimeStamp() {
 	return oss.str();
 }
 
-void Main::readConfig() {
-	string fileContent;
-	string key;
-	string value;
+bool Main::readConfig() {
+	string fileContent, key, value;
 	ifstream ConfigFile("config.txt");
-		
-	// input validation
 
+	// Check if the file opened successfully
 	if (!ConfigFile.is_open()) {
-		cerr << "Error: Could not open config.txt" << std::endl;
+		cerr << "Error: Could not open config.txt" << endl;
+		return false;
 	}
+
+	bool hasThreads = false, hasMax = false; // Track if both values are set
 
 	while (getline(ConfigFile, fileContent)) {
 		istringstream iss(fileContent);
-		iss >> key >> value;
-		if (key == "x") {
-			numThreads = stoi(value);
+
+		if (!(iss >> key >> value)) {
+			cerr << "Warning: Invalid line in config file: " << fileContent << endl;
+			continue; // Skip to next line
 		}
-		else if (key == "y") {
-			max = stoi(value);
+
+		try {
+			if (key == "x") {
+				numThreads = stoi(value);
+				hasThreads = true;
+			}
+			else if (key == "y") {
+				max = stoi(value);
+				hasMax = true;
+			}
+			else {
+				cerr << "Warning: Unknown config key: " << key << endl;
+			}
+		}
+		catch (const invalid_argument&) {
+			cerr << "Error: Invalid number format in config file: " << value << endl;
+			continue; // Skip this line
+		}
+		catch (const out_of_range&) {
+			cerr << "Error: Number out of range in config file: " << value << endl;
+			continue; // Skip this line
 		}
 	}
 
+	ConfigFile.close();
+
+	// Ensure both x (numThreads) and y (max) are set
+	if (!hasThreads || !hasMax) {
+		cerr << "Error: Missing required config values (x and y)" << endl;
+		return false;
+	}
+
+	// Validate the parsed values
+	if (numThreads <= 0) {
+		cerr << "Error: Number of threads must be greater than zero. Setting to 1." << endl;
+		numThreads = 1;
+	}
+	if (max <= 0) {
+		cerr << "Error: Max value must be greater than zero. Setting to 100." << endl;
+		max = 100;
+	}
 	if (numThreads > max) {
-		cerr << "Error: Number of threads cannot be greater than the maximum number, setting x = y" << endl;
+		cerr << "Error: Number of threads cannot be greater than max. Setting numThreads = max." << endl;
 		numThreads = max;
 	}
+
+	return true; // Both values were successfully read and validated
 }
 
 int main()

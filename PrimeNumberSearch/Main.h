@@ -13,7 +13,7 @@ public:
 	~Main();
 	void Run();
 	string getTimeStamp();
-	void readConfig();
+	bool readConfig();
 	bool isPrime(long num);
 	bool isPrime(long num, long numThreads, bool immediatePrint, long& lastThread);
 	void searchPrimes(long threadId, long start, long end, vector<long>& primes, bool immediatePrint);
