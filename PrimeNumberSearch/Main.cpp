@@ -22,13 +22,13 @@ Main::~Main()
 {
 }
 
-bool Main::isPrime(int num) {
+bool Main::isPrime(long num) {
 	if (num <= 1) return false;
 	if (num == 2) return true;
 	if (num % 2 == 0) return false;
-	int maxDivisor = static_cast<int>(ceil(sqrt(num)));
+	long maxDivisor = static_cast<long>(ceil(sqrt(num)));
 
-	for (int d = 3; d <= maxDivisor; d += 2) {
+	for (long d = 3; d <= maxDivisor; d += 2) {
 		if (num % d == 0) {
 			return false;
 		}
@@ -36,22 +36,22 @@ bool Main::isPrime(int num) {
 	return true;
 }
 
-bool Main::isPrime(int num, int numThreads, bool immediatePrint, int& lastThread) {
+bool Main::isPrime(long num, long numThreads, bool immediatePrint, long& lastThread) {
 	if (num <= 1) return false;
 	if (num == 2) return true;
 	if (num % 2 == 0) return false;
 
 	bool isPrimeNum = true;
-	int maxDivisor = static_cast<int>(ceil(sqrt(num)));
-	int step = ceil((maxDivisor - 3) / numThreads);
+	long maxDivisor = static_cast<long>(ceil(sqrt(num)));
+	long step = ceil((maxDivisor - 3) / numThreads);
 
 	threads.clear();
-	for (int i = 0; i < numThreads; ++i) {
-		int start = 3 + 2 * i * step;  
-		int end = i == numThreads - 1 ? maxDivisor : (start + 2 * step - 1);		
-	
-		if (end % 2 == 0) end--; 
-		if (start > end) continue;  
+	for (long i = 0; i < numThreads; ++i) {
+		long start = 3 + 2 * i * step;
+		long end = i == numThreads - 1 ? maxDivisor : (start + 2 * step - 1);
+
+		if (end % 2 == 0) end--;
+		if (start > end) continue;
 
 		threads.emplace_back(&Main::checkDivisibility, this, i, start, end, num, ref(isPrimeNum), ref(lastThread));
 	}
@@ -63,26 +63,27 @@ bool Main::isPrime(int num, int numThreads, bool immediatePrint, int& lastThread
 	return isPrimeNum;
 }
 
-void Main::checkDivisibility(int threadId, int start, int end, int num, bool& isPrimeNum, int& lastThread) {
-	for (int i = start; i <= end; i += 2) {
+
+void Main::checkDivisibility(long threadId, long start, long end, long num, bool& isPrimeNum, long& lastThread) {
+	for (long i = start; i <= end; i += 2) {
 		if (num % i == 0) {
 			lock_guard<mutex> lock(mtx);
 			isPrimeNum = false;
 			return;
-		}		
+		}
 	}
 
 	lock_guard<mutex> lock(mtx);
 	lastThread = threadId;
 }
 
-void Main::searchPrimes(int threadId, int start, int end, vector<int>& primes, bool immediatePrint) {
-	for (int i = start; i <= end; i++) {
+void Main::searchPrimes(long threadId, long start, long end, vector<long>& primes, bool immediatePrint) {
+	for (long i = start; i <= end; i++) {
 		if (isPrime(i)) {
 			if (immediatePrint) {
 				lock_guard<mutex> lock(mtx);
 				getTimeStamp();
-				cout << "Thread " << threadId << " found prime: " << i << " at " << getTimeStamp()<< endl;
+				cout << "Thread " << threadId << " found prime: " << i << " at " << getTimeStamp() << endl;
 			}
 			else {
 				lock_guard<mutex> lock(mtx);
@@ -98,12 +99,12 @@ void Main::Run()
 	bool straightDivision = false;
 	readConfig();
 
-	int step = max / numThreads;
+	long step = max / numThreads;
 	
 	if (straightDivision) {
-		for (int i = 0; i < numThreads; ++i) {
-			int start = i * step + 1;
-			int end = (i == numThreads - 1) ? max : (i + 1) * step;
+		for (long i = 0; i < numThreads; ++i) {
+			long start = i * step + 1;
+			long end = (i == numThreads - 1) ? max : (i + 1) * step;
 			threads.emplace_back(&Main::searchPrimes, this, i, start, end, ref(primes),immediatePrint);
 		}
 
@@ -112,9 +113,9 @@ void Main::Run()
 		}
 	}
 	else {
-		int lastThread = 0;
+		long lastThread = 0;
 
-		for (int num = 2; num <= max; num++) {
+		for (long num = 2; num <= max; num++) {
 			if (isPrime(num, numThreads, immediatePrint, ref(lastThread))) {
 				if (immediatePrint) {
 					cout << "Thread " << lastThread << " found prime: " << num << " at " << getTimeStamp() << endl;
@@ -128,7 +129,7 @@ void Main::Run()
 
 	if (!immediatePrint) {
 		cout << "Primes found: " << endl;
-		for (int prime : primes) {
+		for (long prime : primes) {
 			cout << prime << endl;
 		}
 	}
@@ -154,6 +155,7 @@ void Main::readConfig() {
 	ifstream ConfigFile("config.txt");
 		
 	// input validation
+
 	if (!ConfigFile.is_open()) {
 		cerr << "Error: Could not open config.txt" << std::endl;
 	}
@@ -169,9 +171,6 @@ void Main::readConfig() {
 		}
 	}
 
-	if (numThreads <= 0 || max <= 0) {
-		cerr << "Error: Values for x or y are too low" << endl;
-	}
 	if (numThreads > max) {
 		cerr << "Error: Number of threads cannot be greater than the maximum number, setting x = y" << endl;
 		numThreads = max;

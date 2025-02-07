@@ -14,15 +14,15 @@ public:
 	void Run();
 	string getTimeStamp();
 	void readConfig();
-	bool isPrime(int num);
-	bool isPrime(int num, int numThreads, bool immediatePrint, int& lastThread);
-	void searchPrimes(int threadId, int start, int end, vector<int>& primes, bool immediatePrint);
-	void checkDivisibility(int threadId, int start, int end, int num, bool& isPrimeNum, int& lastThread);
+	bool isPrime(long num);
+	bool isPrime(long num, long numThreads, bool immediatePrint, long& lastThread);
+	void searchPrimes(long threadId, long start, long end, vector<long>& primes, bool immediatePrint);
+	void checkDivisibility(long threadId, long start, long end, long num, bool& isPrimeNum, long& lastThread);
 
 private:
-	int numThreads;
-	int max;
-	vector<int> primes;
+	long numThreads;
+	long max;
+	vector<long> primes;
 	vector<thread> threads;
 	mutex mtx;
 };
