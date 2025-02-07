@@ -1,3 +1,2 @@
-num-threads 4
-min 1
-max 10
+x 10
+y 1000

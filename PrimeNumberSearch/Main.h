@@ -15,9 +15,9 @@ public:
 	string getTimeStamp();
 	void readConfig();
 	bool isPrime(int num);
-	bool isPrime(int num, int numThreads, bool immediatePrint);
+	bool isPrime(int num, int numThreads, bool immediatePrint, int& lastThread);
 	void searchPrimes(int threadId, int start, int end, vector<int>& primes, bool immediatePrint);
-	void checkDivisibility(int threadId, int start, int end, int num, bool& isPrimeNum);
+	void checkDivisibility(int threadId, int start, int end, int num, bool& isPrimeNum, int& lastThread);
 
 private:
 	int numThreads;

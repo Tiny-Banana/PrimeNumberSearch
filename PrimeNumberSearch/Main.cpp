@@ -36,19 +36,16 @@ bool Main::isPrime(int num) {
 	return true;
 }
 
-bool Main::isPrime(int num, int numThreads, bool immediatePrint) {
+bool Main::isPrime(int num, int numThreads, bool immediatePrint, int& lastThread) {
 	if (num <= 1) return false;
 	if (num == 2) return true;
 	if (num % 2 == 0) return false;
 
 	bool isPrimeNum = true;
 	int maxDivisor = static_cast<int>(ceil(sqrt(num)));
-
-	//int step = std::max(1, static_cast<int>(ceil((maxDivisor - 3) / static_cast<double>(numThreads))));
 	int step = ceil((maxDivisor - 3) / numThreads);
 
 	threads.clear();
-
 	for (int i = 0; i < numThreads; ++i) {
 		int start = 3 + 2 * i * step;  
 		int end = i == numThreads - 1 ? maxDivisor : (start + 2 * step - 1);		
@@ -56,11 +53,7 @@ bool Main::isPrime(int num, int numThreads, bool immediatePrint) {
 		if (end % 2 == 0) end--; 
 		if (start > end) continue;  
 
-		cout << "ThreadID: " << i << endl;
-		cout << "Start: " << start << endl;
-		cout << "End: " << end << endl;
-
-		threads.emplace_back(&Main::checkDivisibility, this, i, start, end, num, ref(isPrimeNum));
+		threads.emplace_back(&Main::checkDivisibility, this, i, start, end, num, ref(isPrimeNum), ref(lastThread));
 	}
 
 	for (auto& thread : threads) {
@@ -70,7 +63,7 @@ bool Main::isPrime(int num, int numThreads, bool immediatePrint) {
 	return isPrimeNum;
 }
 
-void Main::checkDivisibility(int threadId, int start, int end, int num, bool& isPrimeNum) {
+void Main::checkDivisibility(int threadId, int start, int end, int num, bool& isPrimeNum, int& lastThread) {
 	for (int i = start; i <= end; i += 2) {
 		if (num % i == 0) {
 			lock_guard<mutex> lock(mtx);
@@ -78,6 +71,9 @@ void Main::checkDivisibility(int threadId, int start, int end, int num, bool& is
 			return;
 		}		
 	}
+
+	lock_guard<mutex> lock(mtx);
+	lastThread = threadId;
 }
 
 void Main::searchPrimes(int threadId, int start, int end, vector<int>& primes, bool immediatePrint) {
@@ -96,22 +92,9 @@ void Main::searchPrimes(int threadId, int start, int end, vector<int>& primes, b
 	}
 }
 
-string Main::getTimeStamp() {
-	auto now = chrono::system_clock::now();
-	time_t now_time_t = chrono::system_clock::to_time_t(now);
-	auto now_ms = chrono::duration_cast<chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-	tm now_tm;
-	localtime_s(&now_tm, &now_time_t);
-
-	ostringstream oss;
-	oss << put_time(&now_tm, "%Y-%m-%d %H:%M:%S") << '.' << setfill('0') << setw(3) << now_ms.count();
-	return oss.str();
-}
-
 void Main::Run()
 {
-	bool immediatePrint = false;
+	bool immediatePrint = true;
 	bool straightDivision = false;
 	readConfig();
 
@@ -129,15 +112,16 @@ void Main::Run()
 		}
 	}
 	else {
+		int lastThread = 0;
+
 		for (int num = 2; num <= max; num++) {
-			if (isPrime(num, numThreads, immediatePrint)) {
-				primes.push_back(num);
-				/*if (immediatePrint) {
-					cout << "Found prime: " << num << endl;
+			if (isPrime(num, numThreads, immediatePrint, ref(lastThread))) {
+				if (immediatePrint) {
+					cout << "Thread " << lastThread << " found prime: " << num << " at " << getTimeStamp() << endl;
 				}
 				else {
-					
-				}*/
+					primes.push_back(num);
+				}
 			}
 		}
 	}
@@ -150,6 +134,19 @@ void Main::Run()
 	}
 }
 
+string Main::getTimeStamp() {
+	auto now = chrono::system_clock::now();
+	time_t now_time_t = chrono::system_clock::to_time_t(now);
+	auto now_ms = chrono::duration_cast<chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+	tm now_tm;
+	localtime_s(&now_tm, &now_time_t);
+
+	ostringstream oss;
+	oss << put_time(&now_tm, "%Y-%m-%d %H:%M:%S") << '.' << setfill('0') << setw(3) << now_ms.count();
+	return oss.str();
+}
+
 void Main::readConfig() {
 	string fileContent;
 	string key;
@@ -157,7 +154,6 @@ void Main::readConfig() {
 	ifstream ConfigFile("config.txt");
 		
 	// input validation
-
 	if (!ConfigFile.is_open()) {
 		cerr << "Error: Could not open config.txt" << std::endl;
 	}
@@ -173,6 +169,9 @@ void Main::readConfig() {
 		}
 	}
 
+	if (numThreads <= 0 || max <= 0) {
+		cerr << "Error: Values for x or y are too low" << endl;
+	}
 	if (numThreads > max) {
 		cerr << "Error: Number of threads cannot be greater than the maximum number, setting x = y" << endl;
 		numThreads = max;
