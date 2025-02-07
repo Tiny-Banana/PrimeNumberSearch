@@ -7,7 +7,7 @@ This project is a multi-threaded prime number finder written in C++. It determin
 1. **Printing variations**
 - Print when a prime is found
 - Wait until all threads are done.
-2. **Task Division schemes**
+2. **Task Division Schemes**
 - Straight division of search range
 - The search is linear but the threads are for divisibility testing of individual numbers.
 
